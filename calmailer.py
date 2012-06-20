@@ -281,7 +281,7 @@ def main():
 	gflags.FLAGS.auth_local_webserver = options.auth_local_webserver
 
 	if not args:
-		args = ["send_all"]
+		args = ["sendall"]
 
 	credentials = None
 	service = None
