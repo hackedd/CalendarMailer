@@ -1,0 +1,5 @@
+#!/usr/bin/env ./virtualenv/bin/python
+
+from calmailer import main
+
+main()
