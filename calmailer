@@ -1,5 +1,8 @@
-#!/usr/bin/env ./virtualenv/bin/python
+#!/usr/bin/env python
+from os.path import join, dirname, exists
+
+activate_this = join(dirname(__file__), "virtualenv/bin/activate_this.py")
+if exists(activate_this): execfile(activate_this, dict(__file__ = activate_this))
 
 from calmailer import main
-
 main()
