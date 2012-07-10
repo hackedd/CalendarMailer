@@ -109,7 +109,7 @@ def get_template(config, subscription):
 """
 	return fix_newlines(headers), fix_newlines(body)
 
-def send_email(config, subscription, events):
+def send_email(config, subscription, events, dryrun = False):
 	def strptime(value):
 		if "+" in value: value, tz = value.split("+")
 		if value.endswith("Z"): value = value[:-1]
@@ -178,14 +178,20 @@ def send_email(config, subscription, events):
 			with open(messageFile) as fp:
 				oldMessage = fp.read()
 			if oldMessage == message:
+				if dryrun: print >>sys.stderr, "New message is same as previous, not sending"
 				return
 
-		server = smtplib.SMTP("localhost")
-		server.sendmail(from_, to, message)
-		server.quit()
+		if dryrun:
+			print >>sys.stderr, "From:", from_
+			print >>sys.stderr, "To:", from_
+			print >>sys.stderr, message
+		else:
+			server = smtplib.SMTP("localhost")
+			server.sendmail(from_, to, message)
+			server.quit()
 
-		with open(messageFile, "w") as fp:
-			fp.write(message)
+			with open(messageFile, "w") as fp:
+				fp.write(message)
 
 	finally:
 		if savedLocale:
@@ -198,6 +204,8 @@ def main():
 		help = "display available subcommands")
 	parser.add_option("-c", "--config", default = "~/.calmailer", metavar = "DIR",
 		help = "directory to store configuration files")
+	parser.add_option("--dry-run", dest = "dryrun", action = "store_true",
+		help = "do everything except sending the actual email message")
 
 	auth = OptionGroup(parser, "OAuth Options")
 	auth.add_option("--auth_local_webserver", dest = "auth_local_webserver",
@@ -392,7 +400,7 @@ def main():
 				subscriptions = get_subscriptions(config)
 				for id, subscription in subscriptions.iteritems():
 					events = get_events(service, id, subscription)
-					send_email(config, subscription, events)
+					send_email(config, subscription, events, options.dryrun)
 
 			elif action == "send":
 				summary_or_id = args[i]
@@ -402,7 +410,7 @@ def main():
 				id, subscription = find_subscription(subscriptions, summary_or_id)
 				if id:
 					events = get_events(service, id, subscription)
-					send_email(config, subscription, events)
+					send_email(config, subscription, events, options.dryrun)
 
 			else:
 				parser.error("unknown action '%s'" % action)
