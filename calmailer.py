@@ -156,7 +156,6 @@ def send_email(config, subscription, events, dryrun = False):
 		message += "\r\n\r\n"
 
 		for event in events:
-			print >>sys.stderr, event["start"]
 			updated = strptime(event["updated"])
 
 			if "dateTime" in event["start"]:
