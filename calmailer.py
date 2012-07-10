@@ -116,6 +116,9 @@ def send_email(config, subscription, events, dryrun = False):
 		if "." in value: value, ms = value.split(".")
 		return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
 
+	def strpdate(value):
+		return datetime.strptime(value, "%Y-%m-%d")
+
 	if not subscription["recipients"]:
 		return
 
@@ -154,8 +157,19 @@ def send_email(config, subscription, events, dryrun = False):
 
 		for event in events:
 			updated = strptime(event["updated"])
-			start = strptime(event["start"]["dateTime"])
-			end = strptime(event["end"]["dateTime"]) if "end" in event else None
+
+			if "dateTime" in event["start"]:
+				start = strptime(event["start"]["dateTime"])
+			else:
+				start = strpdate(event["start"]["date"])
+
+			if "end" in event:
+				if "dateTime" in event["end"]:
+					end = strptime(event["end"]["dateTime"])
+				else:
+					end = strpdate(event["end"]["date"])
+			else:
+				end = None
 
 			vars["start"]    = start.strftime(dateFormat)
 			vars["updated"]  = updated.strftime(dateFormat)
