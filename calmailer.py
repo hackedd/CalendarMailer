@@ -94,12 +94,16 @@ def get_template(config, subscription):
 		if os.path.exists(file):
 			with open(file, "r") as fp:
 				template = fp.read()
-			return fix_newlines(template).split("\r\n\r\n")
+			parts = fix_newlines(template).split("\r\n\r\n")
+			if len(parts) == 3:
+				return parts
+			return parts[0], "%(body)s", parts[1]
 		else:
 			print >>sys.stderr, "Error: Template '%s' does not exist" % file
 
 	headers = "From: %(from)s\nTo: %(to)s\nSubject: %(subject)s\nContent-Type: text/html"
-	body = \
+	body = "<html>\n<body>\n%(body)s\n</body>\n</html>\n"
+	template = \
 """
 <h1>%(summary)s</h1>
 <h2>When</h2>
@@ -107,7 +111,7 @@ def get_template(config, subscription):
 <h2>Description</h2>
 %(description)s
 """
-	return fix_newlines(headers), fix_newlines(body)
+	return fix_newlines(headers), fix_newlines(body), fix_newlines(template)
 
 def send_email(config, subscription, events, dryrun = False):
 	def strptime(value):
@@ -151,9 +155,8 @@ def send_email(config, subscription, events, dryrun = False):
 		else:
 			vars["subject"] = subscription["summary"]
 
-		headerTemplate, bodyTemplate = get_template(config, subscription)
-		message = headerTemplate.strip() % vars
-		message += "\r\n\r\n"
+		headerTemplate, bodyTemplate, template = get_template(config, subscription)
+		body = ""
 
 		for event in events:
 			updated = strptime(event["updated"])
@@ -171,20 +174,26 @@ def send_email(config, subscription, events, dryrun = False):
 			else:
 				end = None
 
-			vars["start"]    = start.strftime(dateFormat)
-			vars["updated"]  = updated.strftime(dateFormat)
+			eventVars = vars.copy()
+			eventVars["start"]    = start.strftime(dateFormat)
+			eventVars["updated"]  = updated.strftime(dateFormat)
 			if end:
-				vars["end"]  = end.strftime(dateFormat)
-				vars["when"] = "%s - %s" % (vars["start"], vars["end"])
+				eventVars["end"]  = end.strftime(dateFormat)
+				eventVars["when"] = "%s - %s" % (eventVars["start"], eventVars["end"])
 			else:
-				vars["end"]  = ""
-				vars["when"] = vars["start"]
+				eventVars["end"]  = ""
+				eventVars["when"] = eventVars["start"]
 
 			for name in ("status", "description", "summary", "location"):
-				vars[name] = event[name] if name in event else "-"
+				eventVars[name] = event[name] if name in event else "-"
 
-			message += bodyTemplate.strip() % vars
-			message += "\r\n\r\n"
+			body += template.strip() % eventVars
+			body += "\r\n"
+
+		vars["body"] = body
+		message = headerTemplate.strip() % vars
+		message += "\r\n\r\n"
+		message += bodyTemplate % vars
 
 		hash = md5(subscription["summary"]).hexdigest()
 		messageFile = os.path.join(config, hash + ".eml")
