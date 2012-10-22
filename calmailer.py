@@ -80,7 +80,7 @@ def get_events(service, calendarId, subscription):
 
 	list = service.events().list(calendarId = calendarId, **args).execute()
 	while True:
-		all.extend(list["items"])
+		if "items" in list: all.extend(list["items"])
 		if "nextPageToken" not in list: break
 		list = service.events().list(calendarId = calendarId, pageToken = list["nextPageToken"]).execute()
 	return all
